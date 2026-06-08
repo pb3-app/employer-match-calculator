@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>401(k) Match Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #f5f5f3;
+    --surface:  #ffffff;
+    --border:   #e0e0dc;
+    --text:     #1a1a1a;
+    --muted:    #6b6b6b;
+    --accent:   #1a1a1a;
+    --green:    #2d6a4f;
+    --green-bg: #f0f7f4;
+    --warn:     #92400e;
+    --warn-bg:  #fffbeb;
+    --mono:     'IBM Plex Mono', monospace;
+    --sans:     'IBM Plex Sans', sans-serif;
+  }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 48px 16px;
+    font-weight: 300;
+  }
+
+  .container {
+    max-width: 580px;
+    margin: 0 auto;
+  }
+
+  header {
+    margin-bottom: 40px;
+  }
+
+  header h1 {
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    margin-bottom: 6px;
+  }
+
+  header p {
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 28px;
+    margin-bottom: 16px;
+  }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 18px;
+  }
+
+  .field {
+    margin-bottom: 16px;
+  }
+
+  .field label {
+    display: block;
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .field input, .field select {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--text);
+    background: var(--bg);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .field input:focus, .field select:focus {
+    border-color: var(--text);
+  }
+
+  .field .hint {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .match-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 18px;
+  }
+
+  .match-toggle input[type="radio"] { display: none; }
+
+  .match-toggle label {
+    padding: 9px 12px;
+    font-size: 13px;
+    text-align: center;
+    cursor: pointer;
+    color: var(--muted);
+    background: var(--bg);
+    transition: background 0.15s, color 0.15s;
+    margin: 0;
+  }
+
+  .match-toggle label:first-of-type {
+    border-right: 1px solid var(--border);
+  }
+
+  .match-toggle input[type="radio"]:checked + label {
+    background: var(--text);
+    color: #fff;
+  }
+
+  #straight-fields, #tiered-fields { display: none; }
+
+  .tier-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 10px;
+    align-items: end;
+    margin-bottom: 10px;
+  }
+
+  .tier-row input {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--text);
+    background: var(--bg);
+    outline: none;
+  }
+
+  .tier-row input:focus { border-color: var(--text); }
+
+  .remove-tier {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--muted);
+    font-size: 16px;
+    cursor: pointer;
+    padding: 7px 10px;
+    line-height: 1;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .remove-tier:hover { border-color: var(--text); color: var(--text); }
+
+  .add-tier {
+    background: none;
+    border: 1px dashed var(--border);
+    border-radius: 3px;
+    color: var(--muted);
+    font-size: 12px;
+    cursor: pointer;
+    padding: 8px 14px;
+    width: 100%;
+    margin-top: 4px;
+    transition: border-color 0.15s, color 0.15s;
+    font-family: var(--sans);
+  }
+  .add-tier:hover { border-color: var(--text); color: var(--text); }
+
+  .tier-col-labels {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+  .tier-col-labels span {
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .submit-btn {
+    width: 100%;
+    padding: 12px;
+    background: var(--text);
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    letter-spacing: 0.03em;
+    transition: opacity 0.15s;
+    margin-top: 4px;
+  }
+  .submit-btn:hover { opacity: 0.85; }
+
+  .error-box {
+    background: var(--warn-bg);
+    border: 1px solid #fde68a;
+    border-radius: 3px;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--warn);
+    margin-bottom: 16px;
+  }
+
+  /* Results */
+  .results-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+
+  .results-header {
+    padding: 16px 28px;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .result-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 12px 28px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+
+  .result-row:last-child { border-bottom: none; }
+
+  .result-row .label { color: var(--muted); }
+
+  .result-row .value {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .result-row.highlight {
+    background: var(--green-bg);
+  }
+  .result-row.highlight .label { color: var(--green); }
+  .result-row.highlight .value { color: var(--green); }
+
+  .result-row.total {
+    background: var(--text);
+  }
+  .result-row.total .label { color: #ccc; font-size: 12px; }
+  .result-row.total .value { color: #fff; font-size: 15px; }
+
+  .warn-box {
+    background: var(--warn-bg);
+    border: 1px solid #fde68a;
+    border-radius: 3px;
+    padding: 12px 16px;
+    font-size: 12px;
+    color: var(--warn);
+    margin-bottom: 16px;
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 4px 0;
+  }
+
+  .tier-line {
+    padding: 8px 28px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .tier-line .label { color: var(--muted); }
+  .tier-line .value { font-family: var(--mono); }
+  .tier-line:last-child { border-bottom: none; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>401(k) Match Calculator</h1>
+    <p>Find out exactly what you need to contribute to get the full employer match.</p>
+  </header>
+
+  {% if error %}
+  <div class="error-box">{{ error }}</div>
+  {% endif %}
+
+  <form method="POST">
+
+    <div class="card">
+      <div class="section-label">Your information</div>
+      <div class="row-2">
+        <div class="field">
+          <label>Annual salary ($)</label>
+          <input type="number" name="salary" step="0.01" min="0" placeholder="75000" value="{{ request.form.salary or '' }}" required>
+        </div>
+        <div class="field">
+          <label>Tax rate (%)</label>
+          <input type="number" name="tax_rate" step="0.1" min="0" max="100" placeholder="25" value="{{ request.form.tax_rate or '' }}" required>
+          <div class="hint">Federal + state combined</div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Pay frequency</label>
+        <select name="freq" required>
+          <option value="52"  {% if request.form.freq == '52'  %}selected{% endif %}>Weekly (52/yr)</option>
+          <option value="26"  {% if request.form.freq == '26' or not request.form.freq %}selected{% endif %}>Bi-weekly (26/yr)</option>
+          <option value="24"  {% if request.form.freq == '24'  %}selected{% endif %}>Semi-monthly (24/yr)</option>
+          <option value="12"  {% if request.form.freq == '12'  %}selected{% endif %}>Monthly (12/yr)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-label">Employer match rule</div>
+
+      <div class="match-toggle">
+        <input type="radio" name="match_type" id="type-straight" value="straight"
+          {% if request.form.match_type != 'tiered' %}checked{% endif %}
+          onchange="showMatchType()">
+        <label for="type-straight">Straight match</label>
+        <input type="radio" name="match_type" id="type-tiered" value="tiered"
+          {% if request.form.match_type == 'tiered' %}checked{% endif %}
+          onchange="showMatchType()">
+        <label for="type-tiered">Tiered match</label>
+      </div>
+
+      <div id="straight-fields">
+        <div class="row-2">
+          <div class="field">
+            <label>Match rate (%)</label>
+            <input type="number" name="match_rate" step="0.1" min="0" placeholder="100" value="{{ request.form.match_rate or '' }}">
+            <div class="hint">e.g. 100 = dollar-for-dollar</div>
+          </div>
+          <div class="field">
+            <label>Up to % of salary</label>
+            <input type="number" name="match_cap" step="0.1" min="0" placeholder="4" value="{{ request.form.match_cap or '' }}">
+            <div class="hint">e.g. 4 = up to 4% of salary</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="tiered-fields">
+        <div class="tier-col-labels">
+          <span>Match rate (%)</span>
+          <span>Next __% of salary</span>
+          <span></span>
+        </div>
+        <div id="tier-rows"></div>
+        <button type="button" class="add-tier" onclick="addTier()">+ Add tier</button>
+      </div>
+    </div>
+
+    <button type="submit" class="submit-btn">Calculate</button>
+  </form>
+
+  {% if results %}
+  <div style="margin-top: 32px;">
+
+    {% if results.irs_warning %}
+    <div class="warn-box">
+      ⚠ Your required contribution of ${{ "{:,.2f}".format(results.required_annual) }} exceeds the 2025 IRS 401(k) limit of $23,500. Verify with your plan administrator.
+    </div>
+    {% endif %}
+
+    <div class="results-card">
+      <div class="results-header">What you need to contribute</div>
+      <div class="result-row">
+        <span class="label">Contribution rate needed</span>
+        <span class="value">{{ results.required_pct }}% of salary</span>
+      </div>
+      <div class="result-row">
+        <span class="label">Required per year</span>
+        <span class="value">${{ "{:,.2f}".format(results.required_annual) }}</span>
+      </div>
+      <div class="result-row highlight">
+        <span class="label">Required per {{ results.freq_label }} paycheck</span>
+        <span class="value">${{ "{:,.2f}".format(results.required_per_check) }}</span>
+      </div>
+    </div>
+
+    <div class="results-card">
+      <div class="results-header">What you will receive</div>
+      {% if results.match_type == 'tiered' %}
+        {% for t in results.tier_breakdown %}
+        <div class="tier-line">
+          <span class="label">Tier {{ t.num }}: {{ t.rate|int }}% on {{ t.cap }}% of salary</span>
+          <span class="value">${{ "{:,.2f}".format(t.employer_annual) }}/yr</span>
+        </div>
+        {% endfor %}
+      {% endif %}
+      <div class="result-row">
+        <span class="label">Employer match per year</span>
+        <span class="value">${{ "{:,.2f}".format(results.employer_annual) }}</span>
+      </div>
+      <div class="result-row highlight">
+        <span class="label">Employer match per {{ results.freq_label }} paycheck</span>
+        <span class="value">${{ "{:,.2f}".format(results.employer_per_check) }}</span>
+      </div>
+    </div>
+
+    <div class="results-card">
+      <div class="results-header">Paycheck impact after tax ({{ results.tax_rate|int }}% rate)</div>
+      <div class="result-row">
+        <span class="label">Gross contribution per {{ results.freq_label }} check</span>
+        <span class="value">${{ "{:,.2f}".format(results.required_per_check) }}</span>
+      </div>
+      <div class="result-row">
+        <span class="label">Tax saved per {{ results.freq_label }} check</span>
+        <span class="value">${{ "{:,.2f}".format(results.tax_saved_per_check) }}</span>
+      </div>
+      <div class="result-row highlight">
+        <span class="label">Actual paycheck reduction</span>
+        <span class="value">${{ "{:,.2f}".format(results.actual_cost_per_check) }}</span>
+      </div>
+      <div class="result-row">
+        <span class="label">Tax saved per year</span>
+        <span class="value">${{ "{:,.2f}".format(results.tax_saved_annual) }}</span>
+      </div>
+      <div class="result-row">
+        <span class="label">Actual out-of-pocket per year</span>
+        <span class="value">${{ "{:,.2f}".format(results.actual_cost_annual) }}</span>
+      </div>
+    </div>
+
+    <div class="results-card">
+      <div class="results-header">Combined total</div>
+      <div class="result-row">
+        <span class="label">Your contribution + employer match per year</span>
+        <span class="value">${{ "{:,.2f}".format(results.total_annual) }}</span>
+      </div>
+      <div class="result-row total">
+        <span class="label">Total per {{ results.freq_label }} paycheck</span>
+        <span class="value">${{ "{:,.2f}".format(results.total_per_check) }}</span>
+      </div>
+    </div>
+
+  </div>
+  {% endif %}
+
+</div>
+
+<script>
+  const tierData = {{ request.form.getlist('tier_rate[]') | tojson }};
+  const capData  = {{ request.form.getlist('tier_cap[]')  | tojson }};
+  let tierCount  = 0;
+
+  function addTier(rate='', cap='') {
+    const container = document.getElementById('tier-rows');
+    const row = document.createElement('div');
+    row.className = 'tier-row';
+    row.innerHTML = `
+      <input type="number" name="tier_rate[]" step="0.1" min="0" placeholder="100" value="${rate}">
+      <input type="number" name="tier_cap[]"  step="0.1" min="0" placeholder="3"   value="${cap}">
+      <button type="button" class="remove-tier" onclick="this.parentElement.remove()">×</button>
+    `;
+    container.appendChild(row);
+    tierCount++;
+  }
+
+  function showMatchType() {
+    const isTiered = document.getElementById('type-tiered').checked;
+    document.getElementById('straight-fields').style.display = isTiered ? 'none' : 'block';
+    document.getElementById('tiered-fields').style.display   = isTiered ? 'block' : 'none';
+  }
+
+  // Init on load
+  showMatchType();
+
+  // Re-populate tiers if form was submitted with tiered type
+  if (tierData.length > 0) {
+    tierData.forEach((r, i) => addTier(r, capData[i] || ''));
+  } else {
+    addTier(); // start with one empty tier row
+  }
+</script>
+</body>
+</html>
